@@ -1,0 +1,25 @@
+{
+    "name": "duylecampos/jwt-oauth2-bundle",
+    "type": "symfony-bundle",
+    "require": {
+        "php": "^7.0",
+        "symfony/framework-bundle": "^4.0",
+        "league/oauth2-server": "^7.1",
+        "symfony/psr-http-message-bridge": "^1.0",
+        "symfony/yaml": "^4.0",
+        "zendframework/zend-diactoros": "^1.7"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Duyle Campos",
+            "email": "duylecampos@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "JwtOAuth2Bundle\\": ""
+        }
+    },
+    "minimum-stability": "dev"
+}
