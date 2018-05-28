@@ -15,6 +15,8 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
+use Psr\Http\Message\ServerRequestInterface;
+
 class ControllerListener implements EventSubscriberInterface
 {
 
@@ -35,20 +37,22 @@ class ControllerListener implements EventSubscriberInterface
         if (!is_array($controller)) {
             return;
         }
-
-        $authorizationData = $this->getAuthorizationData($event->getRequest());
-        $authorizedScopes = $this->getAuthorizedScopes($controller);
-        if ($authorizedScopes) {
-            $this->checkIfRequestScopeIsAuthorized($authorizationData['scopes'], $authorizedScopes);
+        $annotation = $this->getAnnotation($controller);
+        $authorizationRequired = $annotation != null;
+        if ($authorizationRequired) {
+            $authorizedScopes = $this->getAuthorizedScopes($annotation);
+            $authorizationData = $this->getAuthorizationData($event->getRequest());
+            if ($authorizedScopes) {
+                $this->checkIfRequestScopeIsAuthorized($authorizationData['scopes'], $authorizedScopes);
+            }
+            $this->addAuthorizationDataInRequest($event->getRequest(), $authorizationData);
         }
-
-        $this->addAuthorizationDataInRequest($event->getRequest(), $authorizationData);
     }
 
     public static function getSubscribedEvents()
     {
         return array(
-            KernelEvents::CONTROLLER => 'onKernelController',
+            KernelEvents::CONTROLLER => 'onKernelController'
         );
     }
 
@@ -58,10 +62,9 @@ class ControllerListener implements EventSubscriberInterface
         $this->publicKey = $publicKey;
     }
 
-    private function getAuthorizedScopes($controller)
+    private function getAuthorizedScopes($annotation)
     {
         $scopes = null;
-        $annotation = $this->getAnnotation($controller);
         if ($annotation) {
             $scopes = $annotation->getScopes();
         }
@@ -76,7 +79,7 @@ class ControllerListener implements EventSubscriberInterface
         $controllerReflectionObject = new \ReflectionObject($controllerObject);
         $reflectionMethod = $controllerReflectionObject->getMethod($methodName);
         $methodAnnotation = $this->reader->getMethodAnnotation($reflectionMethod, $annotationName);
-        if ($methodAnnotation) {
+        if ($methodAnnotation !== null) {
             return $methodAnnotation;
         }
 
@@ -84,7 +87,7 @@ class ControllerListener implements EventSubscriberInterface
             new \ReflectionClass(ClassUtils::getClass($controllerObject)),
             $annotationName
         );
-        if ($classAnnotation) {
+        if ($classAnnotation !== null) {
             return $classAnnotation;
         }
 
@@ -124,7 +127,7 @@ class ControllerListener implements EventSubscriberInterface
 
     private function addAuthorizationDataInRequest(Request $request, $authorizationData)
     {
-        $request->query->add([
+        $request->request->add([
             'oauth_scopes'      => $authorizationData['scopes'],
             'oauth_client_id'   => $authorizationData['client_id'],
             'oauth_user_id'     => $authorizationData['user_id']

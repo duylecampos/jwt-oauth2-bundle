@@ -15,7 +15,7 @@ class Authenticated
 
     public function __construct(array $data)
     {
-        $this->scopes = $data['scopes'];
+        $this->scopes = array_key_exists('scopes', $data) ? $data['scopes'] : null;
     }
 
     public function getScopes()
