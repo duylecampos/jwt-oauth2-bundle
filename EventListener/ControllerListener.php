@@ -6,6 +6,7 @@ use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Util\ClassUtils;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\ResourceServer;
+use Psr\Http\Message\ServerRequestInterface;
 use Symfony\Bridge\PsrHttpMessage\Factory\DiactorosFactory;
 use Symfony\Bridge\PsrHttpMessage\Factory\HttpFoundationFactory;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -13,9 +14,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
-
-use Psr\Http\Message\ServerRequestInterface;
 
 class ControllerListener implements EventSubscriberInterface
 {
@@ -105,7 +105,7 @@ class ControllerListener implements EventSubscriberInterface
         try {
             $psr7Request = $server->validateAuthenticatedRequest($psr7Request);
         } catch (OAuthServerException $e) {
-            throw new AccessDeniedHttpException($e->getMessage());
+            throw new HttpException($e->getHttpStatusCode(), $e->getMessage());
         }
 
         return [
