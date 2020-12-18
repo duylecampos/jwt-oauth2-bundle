@@ -4,16 +4,16 @@ namespace JwtOAuth2Bundle\EventListener;
 
 use Doctrine\Common\Annotations\Reader;
 use Doctrine\Common\Util\ClassUtils;
+use Doctrine\ORM\EntityManagerInterface;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\ResourceServer;
-use Psr\Http\Message\ServerRequestInterface;
-use Symfony\Bridge\PsrHttpMessage\Factory\DiactorosFactory;
-use Symfony\Bridge\PsrHttpMessage\Factory\HttpFoundationFactory;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
+use Symfony\Component\HttpKernel\Event\ControllerEvent;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
 
@@ -22,16 +22,18 @@ class ControllerListener implements EventSubscriberInterface
 
     protected $reader;
     protected $container;
+    private $em;
 
-    public function __construct(Reader $reader, ContainerInterface $container)
+    public function __construct(Reader $reader, ContainerInterface $container, EntityManagerInterface $em)
     {
         /** @var Reader $reader */
         $this->reader = $reader;
         /** @var ContainerInterface $container */
         $this->container = $container;
+        $this->em = $em;
     }
 
-    public function onKernelController(FilterControllerEvent $event)
+    public function onKernelController(ControllerEvent $event)
     {
         $controller = $event->getController();
         if (!is_array($controller)) {
@@ -96,12 +98,15 @@ class ControllerListener implements EventSubscriberInterface
 
     private function getAuthorizationData(Request $request)
     {
-        $repositoryName = $this->container->getParameter('jwt_o_auth2.access_token_repository.class');
-        $accessTokenRepository = new $repositoryName();
         $publicKey = $this->container->getParameter('jwt_o_auth2.public_key.file');
+        $repositoryName = $this->container->getParameter('jwt_o_auth2.access_token_repository.class');
+        $accessTokenRepository = $this->em->getRepository($repositoryName);
 
         $server = new ResourceServer($accessTokenRepository, $publicKey);
-        $psr7Request = (new DiactorosFactory())->createRequest($request);
+
+        $psr17Factory = new Psr17Factory();
+        $psrHttpFactory = new PsrHttpFactory($psr17Factory, $psr17Factory, $psr17Factory, $psr17Factory);
+        $psr7Request = $psrHttpFactory->createRequest($request);
         try {
             $psr7Request = $server->validateAuthenticatedRequest($psr7Request);
         } catch (OAuthServerException $e) {
