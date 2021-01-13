@@ -1,0 +1,19 @@
+<?xml version="1.0" ?>
+
+<container xmlns="http://symfony.com/schema/dic/services"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
+
+    <parameters>
+        <parameter key="jwt_o_auth2.access_token_repository.class"></parameter>
+        <parameter key="jwt_o_auth2.public_key.file"></parameter>
+    </parameters>
+
+    <services>
+        <service id="jwt_o_auth2.controller.listener" class="JwtOAuth2Bundle\EventListener\ControllerListener" public="false">
+            <tag name="kernel.event_subscriber" />
+            <argument type="service" id="annotation_reader" />
+            <argument type="service" id="service_container" />
+            <argument type="service" id="doctrine.orm.entity_manager" />
+        </service>
+    </services>
+</container>
